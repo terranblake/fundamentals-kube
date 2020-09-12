@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fact-service
+  labels:
+    app: fact-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fact-service
+  template:
+    metadata:
+      labels:
+        app: fact-service
+    spec:
+      containers:
+      - name: fact-service
+        image: terranblake/fact-service
+        command: ["npm", "start"]
+        env:
+          - name: MONGODB
+            value: XXX
+          - name: REDIS
+            value: XXX

@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+    # databases
+    - redis.yaml
+    - mongodb.yaml
+    # services
+    - fact-service.yaml
+    - sec-service.yaml
+    - earnings-service.yaml
+    - metadata-service.yaml
+    - scheduler-service.yaml
+    - taxonomy-service.yaml
