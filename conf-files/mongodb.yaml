@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  labels:
+    name: mongo
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  clusterIP: None
+  selector:
+    role: mongo
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-lb
+  labels:
+    app: mongo
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 27017
+    name: mongo
+    targetPort: 27017
+  selector:
+    app: mongo
+
+---
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  namespace: kube-system
+  name: fast
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+  labels:
+    addonmanager.kubernetes.io/mode: EnsureExists
+
+provisioner: k8s.io/minikube-hostpath
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+spec:
+  selector:
+    matchLabels:
+      role: mongo
+      environment: test
+  serviceName: "mongo"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        role: mongo
+        environment: test
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: mongo
+        image: mongo
+        command:
+          - mongod
+          - "--replSet"
+          - rs0
+        ports:
+          - containerPort: 27017
+        volumeMounts:
+          - name: mongo-persistent-storage
+            mountPath: /data/db
+      - name: mongo-sidecar
+        image: cvallance/mongo-k8s-sidecar
+        env:
+          - name: MONGO_SIDECAR_POD_LABELS
+            value: "role=mongo,environment=test"
+  volumeClaimTemplates:
+    - metadata:
+        name: mongo-persistent-storage
+      spec:
+        storageClassName: fast
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi

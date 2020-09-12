@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taxonomy-service
+  labels:
+    app: taxonomy-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taxonomy-service
+  template:
+    metadata:
+      labels:
+        app: taxonomy-service
+    spec:
+      containers:
+      - name: taxonomy-service
+        image: terranblake/taxonomy-service
+        command: ["npm", "start"]
+        env:
+          - name: MONGODB
+            value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals?replicaSet=rs0
+          - name: REDIS
+            value: redis

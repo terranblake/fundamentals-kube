@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sec-service
+  labels:
+    app: sec-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sec-service
+  template:
+    metadata:
+      labels:
+        app: sec-service
+    spec:
+      containers:
+      - name: sec-service
+        image: terranblake/sec-service
+        command: ["npm", "start"]
+        env:
+          - name: MONGODB
+            value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
+          - name: REDIS
+            value: redis
+          - name: PORT
+            value: "3000"

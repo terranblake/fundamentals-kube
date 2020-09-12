@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-service
+  labels:
+    app: scheduler-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scheduler-service
+  template:
+    metadata:
+      labels:
+        app: scheduler-service
+    spec:
+      containers:
+      - name: scheduler-service
+        image: terranblake/scheduler-service
+        command: ["npm", "start"]
+        env:
+          - name: MONGODB
+            value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
+          - name: REDIS
+            value: redis

@@ -20,6 +20,6 @@ spec:
         command: ["npm", "start"]
         env:
           - name: MONGODB
-            value: XXX
+            value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals?replicaSet=rs0
           - name: REDIS
-            value: XXX
+            value: redis

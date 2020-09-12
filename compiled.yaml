@@ -1,3 +1,101 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+  labels:
+    addonmanager.kubernetes.io/mode: EnsureExists
+  name: fast
+  namespace: kube-system
+provisioner: k8s.io/minikube-hostpath
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: metadata-service
+  name: metadata-service-lb
+spec:
+  ports:
+  - name: metadata-service
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: metadata-service
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: nginx
+  name: metadata-service
+spec:
+  ports:
+  - name: nginx
+    port: 5000
+    targetPort: 5000
+  selector:
+    app: metadata-service
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: mongo
+  name: mongo
+spec:
+  clusterIP: None
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    role: mongo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: redis
+  name: redis
+spec:
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  selector:
+    app: redis
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: earnings-service
+  name: earnings-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: earnings-service
+  template:
+    metadata:
+      labels:
+        app: earnings-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - start
+        env:
+        - name: MONGODB
+          value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
+        - name: REDIS
+          value: redis
+        image: terranblake/earnings-service
+        name: earnings-service
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,8 +118,190 @@ spec:
         - start
         env:
         - name: MONGODB
-          value: XXX
+          value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
         - name: REDIS
-          value: XXX
+          value: redis
         image: terranblake/fact-service
         name: fact-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: metadata-service
+  name: metadata-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metadata-service
+  template:
+    metadata:
+      labels:
+        app: metadata-service
+    spec:
+      containers:
+      - command:
+        - python
+        - ./src/server.py
+        env:
+        - name: PORT
+          value: "5000"
+        image: terranblake/metadata-service
+        name: metadata-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: redis
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - command:
+        - redis-server
+        image: redis
+        name: redis
+        ports:
+        - containerPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: scheduler-service
+  name: scheduler-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scheduler-service
+  template:
+    metadata:
+      labels:
+        app: scheduler-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - start
+        env:
+        - name: MONGODB
+          value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
+        - name: REDIS
+          value: redis
+        image: terranblake/scheduler-service
+        name: scheduler-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sec-service
+  name: sec-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sec-service
+  template:
+    metadata:
+      labels:
+        app: sec-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - start
+        env:
+        - name: MONGODB
+          value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
+        - name: REDIS
+          value: redis
+        - name: PORT
+          value: "3000"
+        image: terranblake/sec-service
+        name: sec-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: taxonomy-service
+  name: taxonomy-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taxonomy-service
+  template:
+    metadata:
+      labels:
+        app: taxonomy-service
+    spec:
+      containers:
+      - command:
+        - npm
+        - start
+        env:
+        - name: MONGODB
+          value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
+        - name: REDIS
+          value: redis
+        image: terranblake/taxonomy-service
+        name: taxonomy-service
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      environment: test
+      role: mongo
+  serviceName: mongo
+  template:
+    metadata:
+      labels:
+        environment: test
+        role: mongo
+    spec:
+      containers:
+      - command:
+        - mongod
+        - --replSet
+        - rs0
+        image: mongo
+        name: mongo
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - mountPath: /data/db
+          name: mongo-persistent-storage
+      - env:
+        - name: MONGO_SIDECAR_POD_LABELS
+          value: role=mongo,environment=test
+        image: cvallance/mongo-k8s-sidecar
+        name: mongo-sidecar
+      terminationGracePeriodSeconds: 10
+  volumeClaimTemplates:
+  - metadata:
+      name: mongo-persistent-storage
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: fast

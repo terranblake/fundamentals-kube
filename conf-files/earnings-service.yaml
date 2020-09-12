@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: earnings-service
+  labels:
+    app: earnings-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: earnings-service
+  template:
+    metadata:
+      labels:
+        app: earnings-service
+    spec:
+      containers:
+      - name: earnings-service
+        image: terranblake/earnings-service
+        command: ["npm", "start"]
+        env:
+          - name: MONGODB
+            value: mongodb://mongo-0.mongo,mongo-1.mongo,mongo-2.mongo:27017/fundamentals\_?
+          - name: REDIS
+            value: redis
